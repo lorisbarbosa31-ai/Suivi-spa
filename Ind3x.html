@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#7c6cf0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Suivi SPA">
+<link rel="manifest" href="manifest.json">
+<title>Suivi SPA</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:linear-gradient(160deg,#eef0ff,#fdeefa);color:#2d2a4a;min-height:100vh;padding-bottom:90px}
+header{padding:28px 20px 10px;text-align:center}
+header h1{margin:0;font-size:24px;color:#5b4bd6}
+header p{margin:4px 0 0;color:#8a86ad;font-size:14px}
+.tabs{position:fixed;bottom:0;left:0;right:0;display:flex;background:#fff;box-shadow:0 -4px 20px rgba(90,75,214,.12);padding-bottom:env(safe-area-inset-bottom)}
+.tabs button{flex:1;border:0;background:none;padding:12px 4px;font-size:12px;color:#8a86ad}
+.tabs button span{display:block;font-size:22px}
+.tabs button.on{color:#5b4bd6;font-weight:600}
+.page{display:none;padding:10px 16px}
+.page.on{display:block}
+.card{background:#fff;border-radius:20px;padding:18px;margin-bottom:14px;box-shadow:0 6px 20px rgba(90,75,214,.08)}
+.card h2{margin:0 0 12px;font-size:16px;color:#5b4bd6}
+input[type=date]{width:100%;padding:12px;border:2px solid #e4e1ff;border-radius:12px;font-size:16px;color:#2d2a4a;background:#faf9ff}
+.sym{margin-bottom:16px}
+.sym .row{display:flex;justify-content:space-between;font-size:15px;margin-bottom:6px}
+.sym .val{font-weight:700;color:#5b4bd6}
+input[type=range]{width:100%;accent-color:#7c6cf0;height:28px}
+.moods{display:flex;justify-content:space-between;gap:6px}
+.moods button{flex:1;font-size:30px;padding:10px 0;border:2px solid #e4e1ff;background:#faf9ff;border-radius:14px}
+.moods button.on{border-color:#7c6cf0;background:#ece9ff;transform:scale(1.08)}
+textarea{width:100%;min-height:90px;margin-top:12px;padding:12px;border:2px solid #e4e1ff;border-radius:12px;font-size:15px;font-family:inherit;background:#faf9ff;resize:vertical}
+.btn{width:100%;padding:15px;border:0;border-radius:14px;background:linear-gradient(135deg,#7c6cf0,#a66cf0);color:#fff;font-size:17px;font-weight:600;box-shadow:0 6px 16px rgba(124,108,240,.35)}
+.btn.sec{background:#fff;color:#5b4bd6;border:2px solid #d9d4ff;box-shadow:none;margin-top:10px}
+.stat{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0eeff;font-size:15px}
+.stat:last-child{border:0}
+.bar{height:10px;border-radius:5px;background:#eee9ff;overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#7cd6a0,#f0c86c,#f06c7c)}
+.chart{display:flex;align-items:flex-end;justify-content:space-between;height:120px;gap:6px;margin-top:10px}
+.chart div{flex:1;text-align:center;font-size:11px;color:#8a86ad}
+.chart b{display:block;background:linear-gradient(180deg,#a66cf0,#7c6cf0);border-radius:6px 6px 0 0;margin-bottom:4px;min-height:3px}
+.summary{background:linear-gradient(135deg,#7c6cf0,#a66cf0);color:#fff;border-radius:20px;padding:18px;margin-bottom:14px;line-height:1.5}
+.entry{padding:12px 0;border-bottom:1px solid #f0eeff}
+.entry:last-child{border:0}
+.entry .top{display:flex;justify-content:space-between;font-weight:600}
+.entry small{color:#8a86ad}
+.entry p{margin:6px 0 0;font-size:14px;color:#5a577a}
+.empty{text-align:center;color:#8a86ad;padding:20px}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:#5b4bd6;color:#fff;padding:12px 22px;border-radius:30px;transition:.3s;z-index:9}
+.toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<header><h1>💜 Suivi SPA</h1><p>Mon quotidien avec la spondylarthrite</p></header>
+
+<div class="page on" id="p-saisie">
+  <div class="card"><h2>📅 Date</h2><input type="date" id="date"></div>
+  <div class="card"><h2>🩺 Intensité des symptômes (0–10)</h2><div id="syms"></div></div>
+  <div class="card"><h2>🧠 Mon moral aujourd'hui</h2>
+    <div class="moods" id="moods"></div>
+    <textarea id="note" placeholder="Comment je me sens mentalement par rapport à la maladie ?"></textarea>
+  </div>
+  <button class="btn" onclick="save()">Enregistrer ma journée</button>
+</div>
+
+<div class="page" id="p-resume">
+  <div class="summary" id="sum"></div>
+  <div class="card"><h2>📊 Moyennes de la semaine</h2><div id="avgs"></div></div>
+  <div class="card"><h2>📈 Douleur globale par jour</h2><div class="chart" id="chart"></div></div>
+</div>
+
+<div class="page" id="p-histo">
+  <div class="card"><h2>🗓️ Historique</h2><div id="histo"></div></div>
+  <div class="card"><h2>💾 Sauvegarde</h2>
+    <button class="btn sec" style="margin-top:0" onclick="exportData()">Exporter mes données</button>
+    <button class="btn sec" onclick="document.getElementById('imp').click()">Importer mes données</button>
+    <input type="file" id="imp" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+</div>
+
+<nav class="tabs">
+  <button class="on" onclick="tab('saisie',this)"><span>✏️</span>Aujourd'hui</button>
+  <button onclick="tab('resume',this)"><span>📊</span>Semaine</button>
+  <button onclick="tab('histo',this)"><span>🗓️</span>Historique</button>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+const SYMS=[["Douleur dorsale","🔥"],["Raideur matinale","🥶"],["Fatigue","😴"],["Douleur articulaire","🦴"],["Gêne au mouvement","🚶"]];
+const MOODS=["😠","😟","😐","🙂","😄"];
+const KEY="spa_data";
+let data=JSON.parse(localStorage.getItem(KEY)||"{}");
+let mood=null, vals=SYMS.map(()=>0);
+
+const $=id=>document.getElementById(id);
+const today=()=>new Date().toISOString().slice(0,10);
+const fr=d=>new Date(d+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+
+function build(){
+  $("syms").innerHTML=SYMS.map((s,i)=>`<div class="sym"><div class="row"><span>${s[1]} ${s[0]}</span><span class="val" id="v${i}">0</span></div><input type="range" min="0" max="10" value="0" id="r${i}" oninput="vals[${i}]=+this.value;$('v${i}').textContent=this.value"></div>`).join("");
+  $("moods").innerHTML=MOODS.map((m,i)=>`<button id="m${i}" onclick="setMood(${i})">${m}</button>`).join("");
+}
+function setMood(i){mood=i;MOODS.forEach((_,j)=>$("m"+j).classList.toggle("on",j===i))}
+function load(){
+  const e=data[$("date").value];
+  vals=e?[...e.vals]:SYMS.map(()=>0);
+  vals.forEach((v,i)=>{$("r"+i).value=v;$("v"+i).textContent=v});
+  mood=e?e.mood:null;MOODS.forEach((_,j)=>$("m"+j).classList.toggle("on",j===mood));
+  $("note").value=e?e.note:"";
+}
+function save(){
+  data[$("date").value]={vals:[...vals],mood,note:$("note").value};
+  localStorage.setItem(KEY,JSON.stringify(data));
+  toast("Journée enregistrée 💜");render();
+}
+function toast(t){const e=$("toast");e.textContent=t;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),2000)}
+function tab(n,b){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("on"));
+  $("p-"+n).classList.add("on");
+  document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on");render();
+}
+function lastDays(n){
+  const r=[];
+  for(let i=n-1;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const k=d.toISOString().slice(0,10);r.push([k,data[k]])}
+  return r;
+}
+function render(){
+  const week=lastDays(7), filled=week.filter(x=>x[1]);
+  if(!filled.length){
+    $("sum").innerHTML="Aucune donnée cette semaine. Commence par enregistrer ta journée 💜";
+    $("avgs").innerHTML="";$("chart").innerHTML="";
+  }else{
+    const per=SYMS.map((s,i)=>avg(filled.map(x=>x[1].vals[i])));
+    const glob=filled.map(x=>[x[0],avg(x[1].vals)]);
+    const worst=glob.reduce((a,b)=>b[1]>a[1]?b:a);
+    const moods=filled.filter(x=>x[1].mood!==null).map(x=>x[1].mood);
+    const g=avg(glob.map(x=>x[1]));
+    const lvl=g<3?"plutôt légère":g<6?"modérée":"marquée";
+    $("sum").innerHTML=`<b>Résumé de la semaine</b><br>Sur ${filled.length} jour(s) renseigné(s), la maladie a eu une influence <b>${lvl}</b> (moyenne ${g.toFixed(1)}/10). Jour le plus difficile : <b>${fr(worst[0])}</b> (${worst[1].toFixed(1)}/10). Symptôme dominant : <b>${SYMS[per.indexOf(Math.max(...per))][0].toLowerCase()}</b>.${moods.length?` Moral moyen : ${MOODS[Math.round(avg(moods))]}`:""}`;
+    $("avgs").innerHTML=SYMS.map((s,i)=>`<div class="stat" style="display:block"><div style="display:flex;justify-content:space-between"><span>${s[1]} ${s[0]}</span><b>${per[i].toFixed(1)}</b></div><div class="bar"><i style="width:${per[i]*10}%"></i></div></div>`).join("");
+    $("chart").innerHTML=week.map(([k,e])=>{const v=e?avg(e.vals):0;return `<div><b style="height:${v*10}px"></b>${new Date(k+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"narrow"})}</div>`}).join("");
+  }
+  const keys=Object.keys(data).sort().reverse();
+  $("histo").innerHTML=keys.length?keys.map(k=>{const e=data[k];return `<div class="entry"><div class="top"><span>${fr(k)}</span><span>${e.mood!==null?MOODS[e.mood]:""}</span></div><small>Douleur moyenne : ${avg(e.vals).toFixed(1)}/10</small>${e.note?`<p>${e.note.replace(/</g,"<")}</p>`:""}</div>`}).join(""):'<div class="empty">Rien d\'enregistré pour l\'instant</div>';
+}
+function exportData(){
+  const b=new Blob([JSON.stringify(data)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="suivi-spa.json";a.click();
+}
+function importData(ev){
+  const f=ev.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{data=JSON.parse(r.result);localStorage.setItem(KEY,JSON.stringify(data));load();render();toast("Données importées ✅")}catch(e){toast("Fichier invalide")}};
+  r.readAsText(f);
+}
+build();$("date").value=today();$("date").onchange=load;load();render();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
